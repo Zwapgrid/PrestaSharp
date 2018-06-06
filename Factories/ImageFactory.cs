@@ -113,7 +113,7 @@ namespace Bukimedia.PrestaSharp.Factories
 
         public byte[] GetManufacturerImage(long ManufacturerId, long ImageId)
         {
-            RestRequest request = this.RequestForGet("images/manufacturers/" + ManufacturerId, ImageId, "");
+            RestRequest request = this.RequestForGet("images/manufacturers/" + ManufacturerId, ImageId.ToString(), "");
             return this.ExecuteForImage(request);
         }
 
@@ -215,7 +215,7 @@ namespace Bukimedia.PrestaSharp.Factories
 
         public byte[] GetProductImage(long ProductId, long ImageId)
         {
-            RestRequest request = this.RequestForGet("images/products/" + ProductId, ImageId, "");
+            RestRequest request = this.RequestForGet("images/products/" + ProductId, ImageId.ToString(), "");
             return this.ExecuteForImage(request);
         }
 
@@ -260,13 +260,13 @@ namespace Bukimedia.PrestaSharp.Factories
 
         public byte[] GetCategoryImage(long CategoryId, long ImageId)
         {
-            RestRequest request = this.RequestForGet("images/categories/" + CategoryId, ImageId, "");
+            RestRequest request = this.RequestForGet("images/categories/" + CategoryId, ImageId.ToString(), "");
             return this.ExecuteForImage(request);
         }
 
         public byte[] GetCategoryImage(long CategoryId, string TypeName)
         {
-            RestRequest request = this.RequestForGetType("images/categories/" + CategoryId, TypeName, "");
+            RestRequest request = this.RequestForGet("images/categories/" + CategoryId, TypeName, "");
             return this.ExecuteForImage(request);
         }
 

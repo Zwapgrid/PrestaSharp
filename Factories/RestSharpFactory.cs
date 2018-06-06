@@ -19,147 +19,113 @@ namespace Bukimedia.PrestaSharp.Factories
         protected string Account{get;set;}
         protected string Password{get;set;}
 
-        public RestSharpFactory(string BaseUrl, string Account, string Password)
+        protected RestSharpFactory(string BaseUrl, string Account, string Password)
         {
             this.BaseUrl = BaseUrl;
             this.Account = Account;
             this.Password = Password;
         }
 
-        protected T Execute<T>(RestRequest Request) where T : new()
+        protected virtual RestClient GetRestClient(RestRequest request, bool addHandlerforGet = true)
         {
             var client = new RestClient();
+            client.ClearHandlers();
             client.AddHandler("text/html", new PrestaSharpTextErrorDeserializer());
             client.BaseUrl = new Uri(this.BaseUrl);
             //client.Authenticator = new HttpBasicAuthenticator(this.Account, this.Password);
-            Request.AddParameter("ws_key", this.Account, ParameterType.QueryString); // used on every request
-            if (Request.Method == Method.GET)
+            request.AddParameter("ws_key", this.Account, ParameterType.QueryString); // used on every request
+            if (addHandlerforGet && request.Method == Method.GET)
             {
-                client.ClearHandlers();
                 client.AddHandler("text/xml", new Bukimedia.PrestaSharp.Deserializers.PrestaSharpDeserializer());
             }
-            var response = client.Execute<T>(Request);
-            if (response.StatusCode == HttpStatusCode.InternalServerError
-                || response.StatusCode == HttpStatusCode.ServiceUnavailable
-                || response.StatusCode == HttpStatusCode.BadRequest
-                || response.StatusCode == HttpStatusCode.Unauthorized
-                || response.StatusCode == HttpStatusCode.MethodNotAllowed
-                || response.StatusCode == HttpStatusCode.Forbidden
-                || response.StatusCode == HttpStatusCode.NotFound
-                || response.StatusCode == 0)
+            return client;
+        }
+
+        protected virtual void ProcessResponseErrors(IRestRequest request, IRestResponse response)
+        {
+            if (response.IsSuccessful)
+                return;
+            else
             {
-                string RequestParameters = Environment.NewLine;
-                foreach (RestSharp.Parameter Parameter in Request.Parameters)
-                {
-                    RequestParameters += Parameter.Value + Environment.NewLine + Environment.NewLine;
-                }
-                var Exception = new PrestaSharpException(RequestParameters + response.Content, response.ErrorMessage, response.StatusCode, response.ErrorException);
-                throw Exception;
+                var exception = CreateException(request, response);
+                throw exception;
             }
+        }
+
+        protected virtual Exception CreateException(IRestRequest request, IRestResponse response)
+        {
+            string RequestParameters = Environment.NewLine;
+            foreach (RestSharp.Parameter Parameter in request.Parameters)
+            {
+                RequestParameters += Parameter.Value + Environment.NewLine + Environment.NewLine;
+            }
+            return new PrestaSharpException(RequestParameters + response.Content, response.ErrorMessage, response.StatusCode, response.ErrorException);
+        }
+
+        protected T Execute<T>(RestRequest request) where T : new()
+        {
+            var client = GetRestClient(request);
+
+            var response = client.Execute<T>(request);
+
+            ProcessResponseErrors(request, response);
+
             return response.Data;
         }
 
-        protected void ExecuteAsync<T>(RestRequest Request) where T : new()
+        protected async Task<T> ExecuteAsync<T>(RestRequest request) where T : new()
         {
-            var client = new RestClient(this.BaseUrl);
-            try
-            {
-                client.ExecuteAsync(Request, response =>
-                {
-                    if (response.StatusCode == HttpStatusCode.OK)
-                    {
-                        Console.WriteLine(response.ToString());
-                    }
-                    else
-                    {
-                        Console.WriteLine(response.ToString());
-                    }
-                });
-            }
-            catch (Exception error)
-            {
-                error.ToString();
-            }
-        }
+            var client = GetRestClient(request);
 
-        protected T ExecuteForFilter<T>(RestRequest Request) where T : new()
-        {
-            var client = new RestClient();
-            client.BaseUrl = new Uri(this.BaseUrl);
-            //client.Authenticator = new HttpBasicAuthenticator(this.Account, this.Password);
-            Request.AddParameter("ws_key", this.Account, ParameterType.QueryString); // used on every request
-            client.ClearHandlers();
-            client.AddHandler("text/xml", new Bukimedia.PrestaSharp.Deserializers.PrestaSharpDeserializer());
-            var response = client.Execute<T>(Request);
-            if (response.StatusCode == HttpStatusCode.InternalServerError
-                || response.StatusCode == HttpStatusCode.ServiceUnavailable
-                || response.StatusCode == HttpStatusCode.BadRequest
-                || response.StatusCode == HttpStatusCode.Unauthorized
-                || response.StatusCode == HttpStatusCode.MethodNotAllowed
-                || response.StatusCode == HttpStatusCode.Forbidden
-                || response.StatusCode == HttpStatusCode.NotFound
-                || response.StatusCode == 0)
-            {
-                string RequestParameters = Environment.NewLine;
-                foreach (RestSharp.Parameter Parameter in Request.Parameters)
-                {
-                    RequestParameters += Parameter.Value + Environment.NewLine + Environment.NewLine;
-                }
-                var Exception = new PrestaSharpException(RequestParameters + response.Content, response.ErrorMessage, response.StatusCode, response.ErrorException);
-                throw Exception;
-            }
+            var response = await client.ExecuteTaskAsync<T>(request);
+
+            ProcessResponseErrors(request, response);
+
             return response.Data;
         }
 
-        protected List<long> ExecuteForGetIds<T>(RestRequest Request, string RootElement) where T : new()
+        protected List<long> ExecuteForGetIds<T>(RestRequest request, string RootElement) where T : new()
         {
-            var client = new RestClient();
-            client.BaseUrl = new Uri(this.BaseUrl);
-            //client.Authenticator = new HttpBasicAuthenticator(this.Account, this.Password);
-            Request.AddParameter("ws_key", this.Account, ParameterType.QueryString);
-            var response = client.Execute<T>(Request);
-            XDocument xDcoument = XDocument.Parse(response.Content);
-            var ids = (from doc in xDcoument.Descendants(RootElement)
-                       select long.Parse(doc.Attribute("id").Value)).ToList();
+            var client = GetRestClient(request, false);
+
+            var response = client.Execute<T>(request);
+
+            ProcessResponseErrors(request, response);
+
+            return GetIdsFromContent(response.Content, RootElement);
+        }
+
+        protected async Task<List<long>> ExecuteForGetIdsAsync<T>(RestRequest request, string RootElement) where T : new()
+        {
+            var client = GetRestClient(request, false);
+
+            var response = await client.ExecuteTaskAsync<T>(request);
+
+            ProcessResponseErrors(request, response);
+
+            return GetIdsFromContent(response.Content, RootElement);
+        }
+
+        private List<long> GetIdsFromContent(string content, string rootElement)
+        {
+            XDocument xDcoument = XDocument.Parse(content);
+            var ids = (from doc in xDcoument.Descendants(rootElement)
+                select long.Parse(doc.Attribute("id").Value)).ToList();
             return ids;
         }
 
-        protected byte[] ExecuteForImage(RestRequest Request)
+        protected byte[] ExecuteForImage(RestRequest request)
         {
-            var client = new RestClient();
-            client.BaseUrl = new Uri(this.BaseUrl);
-            //client.Authenticator = new HttpBasicAuthenticator(this.Account, this.Password);
-            Request.AddParameter("ws_key", this.Account, ParameterType.QueryString);
-            var response = client.Execute(Request);
-            if (response.StatusCode == HttpStatusCode.InternalServerError
-                || response.StatusCode == HttpStatusCode.ServiceUnavailable
-                || response.StatusCode == HttpStatusCode.BadRequest
-                || response.StatusCode == HttpStatusCode.Unauthorized
-                || response.StatusCode == HttpStatusCode.MethodNotAllowed
-                || response.StatusCode == HttpStatusCode.Forbidden
-                || response.StatusCode == HttpStatusCode.NotFound
-                || response.StatusCode == 0)
-            {
-                string RequestParameters = Environment.NewLine;
-                foreach (RestSharp.Parameter Parameter in Request.Parameters)
-                {
-                    RequestParameters += Parameter.Value + Environment.NewLine + Environment.NewLine;
-                }
-                var Exception = new PrestaSharpException(RequestParameters + response.Content, response.ErrorMessage, response.StatusCode, response.ErrorException);
-                throw Exception;
-            }
+            var client = GetRestClient(request, false);
+
+            var response = client.Execute(request);
+
+            ProcessResponseErrors(request, response);
+
             return response.RawBytes;
         }
 
-        protected RestRequest RequestForGet(string Resource, long? Id, string RootElement)
-        {
-            var request = new RestRequest();
-            request.Resource = Resource + "/" + Id;
-            request.RootElement = RootElement;
-            return request;
-        }
-
-        protected RestRequest RequestForGetType(string Resource, string Id, string RootElement)
+        protected RestRequest RequestForGet(string Resource, string Id, string RootElement)
         {
             var request = new RestRequest();
             request.Resource = Resource + "/" + Id;
@@ -329,7 +295,7 @@ namespace Bukimedia.PrestaSharp.Factories
         /// <param name="Limit"></param>
         /// <param name="RootElement"></param>
         /// <returns></returns>
-        protected RestRequest RequestForFilter(string Resource, string Display, Dictionary<string,string> Filter, string Sort, string Limit, string RootElement)
+        protected RestRequest RequestForFilter(string Resource, string Display, Dictionary<string,string> Filter = null, string Sort = null, string Limit = null, string RootElement = null)
         {
             var request = new RestRequest();
             request.Resource = Resource;

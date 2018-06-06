@@ -13,14 +13,20 @@ namespace Bukimedia.PrestaSharp.Factories
         protected abstract string singularEntityName { get; }
         protected abstract string pluralEntityName { get; }
 
-        public GenericFactory(string BaseUrl, string Account, string Password) : base(BaseUrl, Account, Password)
+        protected GenericFactory(string BaseUrl, string Account, string Password) : base(BaseUrl, Account, Password)
         {
         }
 
         public T Get(long id)
         {
-            RestRequest request = this.RequestForGet(pluralEntityName, id, singularEntityName);
+            var request = this.RequestForGet(pluralEntityName, id.ToString(), singularEntityName);
             return this.Execute<T>(request);
+        }
+
+        public async Task<T> GetAsync(long id)
+        {
+            var request = this.RequestForGet(pluralEntityName, id.ToString(), singularEntityName);
+            return await this.ExecuteAsync<T>(request);
         }
 
         public T Add(T Entity)
@@ -37,26 +43,26 @@ namespace Bukimedia.PrestaSharp.Factories
 
         public void Update(T Entity)
         {
-            RestRequest request = this.RequestForUpdate(pluralEntityName, Entity.id, Entity);
+            var request = this.RequestForUpdate(pluralEntityName, Entity.id, Entity);
             this.Execute<T>(request);
         }
 
         public List<T> UpdateList(List<T> Entities)
         {
-            List<PrestaSharp.Entities.PrestaShopEntity> EntitiesToAdd = new List<PrestaSharp.Entities.PrestaShopEntity>();
+            var entitiesToAdd = new List<PrestaSharp.Entities.PrestaShopEntity>();
             foreach (T Entity in Entities)
             {
-                EntitiesToAdd.Add(Entity);
+                entitiesToAdd.Add(Entity);
             }
             
-            RestRequest request = this.RequestForUpdateList(singularEntityName, EntitiesToAdd);
+            var request = this.RequestForUpdateList(singularEntityName, entitiesToAdd);
 
             return this.Execute<List<T>>(request);
         }
 
         public void Delete(long id)
         {
-            RestRequest request = this.RequestForDelete(pluralEntityName, id);
+            var request = this.RequestForDelete(pluralEntityName, id);
             this.Execute<T>(request);
         }
 
@@ -67,21 +73,14 @@ namespace Bukimedia.PrestaSharp.Factories
 
         public List<long> GetIds()
         {
-            RestRequest request = this.RequestForGet(pluralEntityName, null, "prestashop");
+            var request = this.RequestForGet(pluralEntityName, null, "prestashop");
             return this.ExecuteForGetIds<List<long>>(request, singularEntityName);
         }
 
-        /// <summary>
-        /// More information about filtering: http://doc.prestashop.com/display/PS14/Chapter+8+-+Advanced+Use
-        /// </summary>
-        /// <param name="Filter">Example: key:name value:Apple</param>
-        /// <param name="Sort">Field_ASC or Field_DESC. Example: name_ASC or name_DESC</param>
-        /// <param name="Limit">Example: 5 limit to 5. 9,5 Only include the first 5 elements starting from the 10th element.</param>
-        /// <returns></returns>
-        public List<T> GetByFilter(Dictionary<string, string> Filter, string Sort, string Limit)
+        public async Task<List<long>> GetIdsAsync()
         {
-            RestRequest request = this.RequestForFilter(pluralEntityName, "full", Filter, Sort, Limit, pluralEntityName);
-            return this.ExecuteForFilter<List<T>>(request);
+            var request = this.RequestForGet(pluralEntityName, null, "prestashop");
+            return await this.ExecuteForGetIdsAsync<List<long>>(request, singularEntityName);
         }
 
         /// <summary>
@@ -92,18 +91,39 @@ namespace Bukimedia.PrestaSharp.Factories
         /// <param name="Limit">Example: 5 limit to 5. 9,5 Only include the first 5 elements starting from the 10th element.</param> 
         /// <param name="Display">Fields to display Example: ["id", "reference"]</param>
         /// <returns></returns>
-        public List<T> GetByFilter(Dictionary<string, string> Filter, string Sort, string Limit, List<string> Display)
+        public List<T> GetByFilter(Dictionary<string, string> Filter = null, string Sort = null, string Limit = null, List<string> Display = null)
+        {
+            var disp = GetDisplayParameter(Display);
+            var request = this.RequestForFilter(pluralEntityName, disp, Filter, Sort, Limit, pluralEntityName);
+            return this.Execute<List<T>>(request);
+        }
+
+        /// <summary>
+        /// More information about filtering: http://doc.prestashop.com/display/PS14/Chapter+8+-+Advanced+Use
+        /// </summary>
+        /// <param name="Filter">Example: key:name value:Apple</param>
+        /// <param name="Sort">Field_ASC or Field_DESC. Example: name_ASC or name_DESC</param>
+        /// <param name="Limit">Example: 5 limit to 5. 9,5 Only include the first 5 elements starting from the 10th element.</param> 
+        /// <param name="Display">Fields to display Example: ["id", "reference"]</param>
+        /// <returns></returns>
+        public async Task<List<T>> GetByFilterAsync(Dictionary<string, string> Filter = null, string Sort = null, string Limit = null, List<string> Display = null)
+        {
+            var disp = GetDisplayParameter(Display);
+            var request = this.RequestForFilter(pluralEntityName, disp, Filter, Sort, Limit, pluralEntityName);
+            return await this.ExecuteAsync<List<T>>(request);
+        }
+
+        private string GetDisplayParameter(List<string> display = null)
         {
             string disp = "full";
-            if (Display.Count() >= 1)
+            if (display != null && display.Any())
             {
                 disp = "[";
-                Display.ForEach(d => { disp += d + ","; });
+                display.ForEach(d => { disp += d + ","; });
                 disp = disp.Remove(disp.Length - 1); ;
                 disp += "]";
             }
-            RestRequest request = this.RequestForFilter(pluralEntityName, disp, Filter, Sort, Limit, pluralEntityName);
-            return this.ExecuteForFilter<List<T>>(request);
+            return disp;
         }
 
         /// <summary>
@@ -115,9 +135,9 @@ namespace Bukimedia.PrestaSharp.Factories
         /// <returns></returns>
         public List<long> GetIdsByFilter(Dictionary<string, string> Filter, string Sort, string Limit)
         {
-            RestRequest request = this.RequestForFilter(pluralEntityName, "[id]", Filter, Sort, Limit, pluralEntityName);
-            List<T> aux = this.Execute<List<T>>(request);
-            return (from t in aux where t.id.HasValue select t.id.Value).ToList();
+            var request = this.RequestForFilter(pluralEntityName, "[id]", Filter, Sort, Limit, pluralEntityName);
+            var aux = this.Execute<List<T>>(request);
+            return aux.Where(t => t.id.HasValue).Select(t => t.id.Value).ToList();
         }
 
         /// <summary>
@@ -126,7 +146,16 @@ namespace Bukimedia.PrestaSharp.Factories
         /// <returns>A list of entities</returns>
         public List<T> GetAll()
         {
-            return this.GetByFilter(null, null, null);
+            return this.GetByFilter();
+        }
+
+        /// <summary>
+        /// Get all entities.
+        /// </summary>
+        /// <returns>A list of entities</returns>
+        public async Task<List<T>> GetAllAsync()
+        {
+            return await this.GetByFilterAsync();
         }
 
         /// <summary>
