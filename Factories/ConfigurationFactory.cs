@@ -14,8 +14,8 @@ namespace Bukimedia.PrestaSharp.Factories
         protected override string singularEntityName { get { return "configuration"; } }
         protected override string pluralEntityName { get { return "configurations"; } }
 
-        public ConfigurationFactory(string BaseUrl, string Account, string SecretKey)
-            : base(BaseUrl, Account, SecretKey)
+        public ConfigurationFactory(string BaseUrl, string AuthenticationKey)
+            : base(BaseUrl, AuthenticationKey)
         {
         }
     }

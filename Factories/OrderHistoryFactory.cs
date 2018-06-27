@@ -14,8 +14,8 @@ namespace Bukimedia.PrestaSharp.Factories
         protected override string singularEntityName { get { return "order_history"; } }
         protected override string pluralEntityName { get { return "order_histories"; } }
 
-        public OrderHistoryFactory(string BaseUrl, string Account, string SecretKey)
-            : base(BaseUrl, Account, SecretKey)
+        public OrderHistoryFactory(string BaseUrl, string AuthenticationKey)
+            : base(BaseUrl, AuthenticationKey)
         {
         }
     }

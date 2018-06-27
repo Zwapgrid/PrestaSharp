@@ -14,8 +14,8 @@ namespace Bukimedia.PrestaSharp.Factories
         protected override string singularEntityName { get { return "order_invoice"; } }
         protected override string pluralEntityName { get { return "order_invoices"; } }
 
-        public OrderInvoiceFactory(string BaseUrl, string Account, string SecretKey)
-            : base(BaseUrl, Account, SecretKey)
+        public OrderInvoiceFactory(string BaseUrl, string AuthenticationKey)
+            : base(BaseUrl, AuthenticationKey)
         {
         }
     }

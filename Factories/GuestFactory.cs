@@ -14,8 +14,8 @@ namespace Bukimedia.PrestaSharp.Factories
         protected override string singularEntityName { get { return "guest"; } }
         protected override string pluralEntityName { get { return "guests"; } }
 
-        public GuestFactory(string BaseUrl, string Account, string SecretKey)
-            : base(BaseUrl, Account, SecretKey)
+        public GuestFactory(string BaseUrl, string AuthenticationKey)
+            : base(BaseUrl, AuthenticationKey)
         {
         }
     }

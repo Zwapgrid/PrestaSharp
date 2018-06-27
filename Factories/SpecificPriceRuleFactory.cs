@@ -14,8 +14,8 @@ namespace Bukimedia.PrestaSharp.Factories
         protected override string singularEntityName { get { return "specific_price_rule"; } }
         protected override string pluralEntityName { get { return "specific_price_rules"; } }
 
-        public SpecificPriceRuleFactory(string BaseUrl, string Account, string SecretKey)
-            : base(BaseUrl, Account, SecretKey)
+        public SpecificPriceRuleFactory(string BaseUrl, string AuthenticationKey)
+            : base(BaseUrl, AuthenticationKey)
         {
         }
 	}

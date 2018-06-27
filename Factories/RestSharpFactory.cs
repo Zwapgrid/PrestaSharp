@@ -16,14 +16,12 @@ namespace Bukimedia.PrestaSharp.Factories
     public abstract class RestSharpFactory
     {
         protected string BaseUrl{get;set;}
-        protected string Account{get;set;}
-        protected string Password{get;set;}
+        protected string AuthenticationKey{get;set;}
 
-        protected RestSharpFactory(string BaseUrl, string Account, string Password)
+        protected RestSharpFactory(string BaseUrl, string AuthenticationKey)
         {
             this.BaseUrl = BaseUrl;
-            this.Account = Account;
-            this.Password = Password;
+            this.AuthenticationKey = AuthenticationKey;
         }
 
         protected virtual RestClient GetRestClient(RestRequest request, bool addHandlerforGet = true)
@@ -32,8 +30,7 @@ namespace Bukimedia.PrestaSharp.Factories
             client.ClearHandlers();
             client.AddHandler("text/html", new PrestaSharpTextErrorDeserializer());
             client.BaseUrl = new Uri(this.BaseUrl);
-            //client.Authenticator = new HttpBasicAuthenticator(this.Account, this.Password);
-            request.AddParameter("ws_key", this.Account, ParameterType.QueryString); // used on every request
+            request.AddParameter("ws_key", this.AuthenticationKey, ParameterType.QueryString); // used on every request
             if (addHandlerforGet && request.Method == Method.GET)
             {
                 client.AddHandler("text/xml", new Bukimedia.PrestaSharp.Deserializers.PrestaSharpDeserializer());

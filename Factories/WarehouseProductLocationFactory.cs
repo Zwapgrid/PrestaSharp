@@ -13,8 +13,8 @@ namespace Bukimedia.PrestaSharp.Factories
         protected override string singularEntityName { get { return "warehouse_product_location"; } }
         protected override string pluralEntityName { get { return "warehouse_product_locations"; } }
 
-        public WarehouseProductLocationFactory(string BaseUrl, string Account, string SecretKey)
-            : base(BaseUrl, Account, SecretKey)
+        public WarehouseProductLocationFactory(string BaseUrl, string AuthenticationKey)
+            : base(BaseUrl, AuthenticationKey)
         {
         }        
     }
